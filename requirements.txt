@@ -9,3 +9,4 @@ wikipedia
 faiss-cpu
 google_generativeai
 fastapi
+uvicorn
