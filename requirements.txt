@@ -1,0 +1,11 @@
+langchain
+langchain_community
+langchain_core
+langchain_google_genai
+langsmith
+protobuf
+streamlit
+wikipedia
+faiss-cpu
+google_generativeai
+fastapi
