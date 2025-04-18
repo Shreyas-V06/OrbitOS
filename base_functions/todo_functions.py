@@ -49,8 +49,8 @@ def create_todo(todo_data: TodoCreate):
         db.collection("Todos").document(unique_id).set(todo_dict)
         todo_name= todo_dict['todo_name']
         todo_date=todo_dict['todo_duedate']
-        result= "Todo created successfully with following details:\n"+"todo name = "+todo_name+"\ntodo duedate = "+todo_date
-        return result
+        
+        return {"status": "successfully created todo", "id": unique_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -76,7 +76,7 @@ def update_todo(unique_id:str, todo_data: TodoUpdate):
 
         if update_data:
             doc_ref.update(update_data)
-            return {"status": "success", "id": unique_id, "updated_fields": list(update_data.keys())}
+            return {"status": "successfully updated todo", "id": unique_id, "updated_fields": list(update_data.keys())}
         else:
             return {"status": "success", "id": unique_id, "message": "No fields to update"}
 
@@ -99,4 +99,7 @@ def delete_todo(unique_id: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+
     
