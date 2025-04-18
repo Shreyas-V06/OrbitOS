@@ -13,5 +13,6 @@ def initialize_agent_executor(AgentLLM):
 
 def invoke_agent(user_input:str):
     agent_executor=initialize_agent_executor()
-    agent_executor.invoke({"input":user_input})
+    response=agent_executor.invoke({"input":user_input})
+    return response['output']
 
