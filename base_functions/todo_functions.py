@@ -1,8 +1,8 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException #type:ignore
 from pydantic import BaseModel,Field
 from typing import List,Optional
 from schemas.todo_schemas import TodoBase,TodoCreate,TodoDelete,TodoUpdate
-from database.initialize_firebase import initialize_firestore
+from initializers.initialize_firestore import initialize_firestore
 import uuid
 
 api=FastAPI()
@@ -47,7 +47,10 @@ def create_todo(todo_data: TodoCreate):
             "unique_id": unique_id,
         }
         db.collection("Todos").document(unique_id).set(todo_dict)
-        return {"status": "success", "id": unique_id}
+        todo_name= todo_dict['todo_name']
+        todo_date=todo_dict['todo_duedate']
+        result= "Todo created successfully with following details:\n"+"todo name = "+todo_name+"\ntodo duedate = "+todo_date
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
