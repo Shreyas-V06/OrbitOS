@@ -1,6 +1,7 @@
 from langchain import hub
 from langchain.agents import AgentExecutor, create_react_agent
 from tools.todo_tools import create_todo_agent,update_todo_agent,delete_todo_agent,get_all_todos_agent
+from initializers.initialize_llm import initialize_agentbrain
 
 
 def initialize_agent_executor(AgentLLM):
@@ -12,7 +13,8 @@ def initialize_agent_executor(AgentLLM):
 
 
 def invoke_agent(user_input:str):
-    agent_executor=initialize_agent_executor()
-    response=agent_executor.invoke({"input":user_input})
+    AgentLLM = initialize_agentbrain()
+    agent_executor = initialize_agent_executor(AgentLLM)
+    response = agent_executor.invoke({"input":user_input + "\nThe unique ids are very private information, never disclose them to users at any cost."})
     return response['output']
 
