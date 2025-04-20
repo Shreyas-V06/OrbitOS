@@ -6,6 +6,7 @@ from initializers.initialize_firestore import initialize_firestore
 from pydantic import BaseModel
 from typing import Optional,List
 from datetime import datetime
+import uuid
 
 
 app = FastAPI()
@@ -20,10 +21,6 @@ app.add_middleware(
 class ChatMessage(BaseModel):
     message: str
 
-class TodoCreate(BaseModel):
-    todo_name: str
-    todo_checkbox: bool = False
-    todo_duedate: Optional[datetime] = None
 
 @app.post("/api/agent/chat")
 async def chat_with_agent(message: ChatMessage):
@@ -37,7 +34,7 @@ async def chat_with_agent(message: ChatMessage):
         return {"error": str(e)}
     
 
-@app.get('/todos',response_model=List[TodoBase])
+@app.get('/todos',response_model=List[dict])
 async def get_todos():
     try:
         db=initialize_firestore()
@@ -47,7 +44,7 @@ async def get_todos():
         todos = []
         for doc in docs:
             data = doc.to_dict()
-            todos.append(TodoBase(**data))
+            todos.append(data)
         
         return todos
     except Exception as e:
@@ -55,14 +52,22 @@ async def get_todos():
     
 
 
-@app.post("/api/todos")
-async def create_todo(todo: TodoCreate):
+@app.post("/todos")
+async def create_todo(todo_data: TodoCreate):
     try:
-        # Use the agent to create the todo
-        response = invoke_agent(f"Create a todo with name: {todo.todo_name}, checkbox: {todo.todo_checkbox}, and due date: {todo.todo_duedate}")
-        return {"message": response}
+        db=initialize_firestore()
+        unique_id = f"todo{uuid.uuid4().hex[:8]}" 
+        todo_dict = {
+            "todo_name": todo_data.todo_name,
+            "todo_checkbox": todo_data.todo_checkbox,  # Removed str() conversion
+            "todo_duedate": todo_data.todo_duedate.isoformat(),
+            "unique_id": unique_id,
+        }
+        db.collection("Todos").document(unique_id).set(todo_dict)
+        
+        return {"status": "successfully created todo", "id": unique_id}
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
     
 
 
@@ -83,7 +88,7 @@ async def get_todo_by_id(unique_id:str):
     
 
 @app.put('/todos/{unique_id}',response_model=dict)
-def update_todo(unique_id:str, todo_data: TodoUpdate):
+async def update_todo(unique_id:str, todo_data: TodoUpdate):
     try:
         db=initialize_firestore()
         doc_ref = db.collection("Todos").document(unique_id)
@@ -107,9 +112,6 @@ def update_todo(unique_id:str, todo_data: TodoUpdate):
             return {"status": "successfully updated todo", "id": unique_id, "updated_fields": list(update_data.keys())}
         else:
             return {"status": "success", "id": unique_id, "message": "No fields to update"}
-
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -132,5 +134,5 @@ def delete_todo(unique_id: str):
 
     
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    import uvicorn #type:ignore
+    uvicorn.run(app, host="0.0.0.0", port=8000)

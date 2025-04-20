@@ -14,27 +14,24 @@ const TodoTab: React.FC = () => {
   const [newTodoName, setNewTodoName] = useState('');
   const [newTodoDueDate, setNewTodoDueDate] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [pendingTodos, setPendingTodos] = useState<Set<string>>(new Set());
+  const [updatingTodos, setUpdatingTodos] = useState<Set<string>>(new Set());
+
+  // Log todos whenever it changes
+  useEffect(() => {
+    console.log('Todos state changed:', todos);
+  }, [todos]);
 
   useEffect(() => {
-    const cachedTodos = localStorage.getItem('todos');
-    if (cachedTodos) {
-      setTodos(JSON.parse(cachedTodos));
-      setIsLoading(false);
-    }
     fetchTodos();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('todos', JSON.stringify(todos));
-  }, [todos]);
-
+  // FETCH ALL TODOS (WORKING)
   const fetchTodos = async () => {
     try {
       const response = await fetch('http://localhost:8000/todos');
       const data = await response.json();
-      setTodos(data);
-      localStorage.setItem('todos', JSON.stringify(data));
+      setTodos(data);  // Set the todos to state
+      console.log('Fetched todos:', data); // Log the fetched todos
     } catch (error) {
       console.error('Error fetching todos:', error);
     } finally {
@@ -42,85 +39,107 @@ const TodoTab: React.FC = () => {
     }
   };
 
+  const handleToggleTodo = async (todoId: string) => {
+    // Prevent multiple clicks while updating
+    if (updatingTodos.has(todoId)) return;
+    
+    const todoToUpdate = todos.find(todo => todo.unique_id === todoId);
+    if (!todoToUpdate) return;
+
+    // Optimistically update UI
+    setTodos(prevTodos =>
+      prevTodos.map(todo =>
+        todo.unique_id === todoId ? { ...todo, todo_checkbox: !todo.todo_checkbox } : todo
+      )
+    );
+
+    // Add to updating set
+    setUpdatingTodos(prev => new Set([...prev, todoId]));
+
+    try {
+      const response = await fetch(`http://localhost:8000/todos/${todoId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          todo_checkbox: !todoToUpdate.todo_checkbox
+        }),
+      });
+
+      if (!response.ok) {
+        // Revert on failure
+        setTodos(prevTodos =>
+          prevTodos.map(todo =>
+            todo.unique_id === todoId ? { ...todo, todo_checkbox: todoToUpdate.todo_checkbox } : todo
+          )
+        );
+      }
+    } catch (error) {
+      // Revert on error
+      setTodos(prevTodos =>
+        prevTodos.map(todo =>
+          todo.unique_id === todoId ? { ...todo, todo_checkbox: todoToUpdate.todo_checkbox } : todo
+        )
+      );
+      console.error('Error updating todo:', error);
+    } finally {
+      setUpdatingTodos(prev => {
+        const next = new Set(prev);
+        next.delete(todoId);
+        return next;
+      });
+    }
+  };
+
   const handleAddTodo = async () => {
     if (!newTodoName.trim()) return;
 
+    // Create temporary todo with a temporary ID
     const tempId = `temp-${Date.now()}`;
-    const newTodo: Todo = {
+    const newTodo = {
       unique_id: tempId,
       todo_name: newTodoName,
       todo_checkbox: false,
       todo_duedate: newTodoDueDate || new Date().toISOString().split('T')[0]
     };
 
+    // Optimistically add to UI
     setTodos(prev => [...prev, newTodo]);
+    
+    // Clear input fields immediately
     setNewTodoName('');
     setNewTodoDueDate('');
 
     try {
-      const response = await fetch('http://localhost:8000/api/todos', {
+      const response = await fetch('http://localhost:8000/todos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newTodo),
-      });
-
-      if (response.ok) {
-        fetchTodos();
-      } else {
-        setTodos(prev => prev.filter(todo => todo.unique_id !== tempId));
-      }
-    } catch (error) {
-      console.error('Error adding todo:', error);
-      setTodos(prev => prev.filter(todo => todo.unique_id !== tempId));
-    }
-  };
-
-  const handleToggleTodo = async (id: string, currentStatus: boolean) => {
-    setTodos(prev =>
-      prev.map(todo =>
-        todo.unique_id === id ? { ...todo, todo_checkbox: !todo.todo_checkbox } : todo
-      )
-    );
-
-    setPendingTodos(prev => new Set(prev).add(id));
-
-    try {
-      const response = await fetch(`http://localhost:8000/todos/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
-          todo_checkbox: !currentStatus
+          todo_name: newTodo.todo_name,
+          todo_checkbox: newTodo.todo_checkbox,
+          todo_duedate: newTodo.todo_duedate,
         }),
       });
 
-      if (!response.ok) {
-        setTodos(prev =>
-          prev.map(todo =>
-            todo.unique_id === id ? { ...todo, todo_checkbox: currentStatus } : todo
-          )
-        );
+      if (response.ok) {
+        // Fetch updated list to get the real ID
+        fetchTodos();
+      } else {
+        // Remove temporary todo on failure
+        setTodos(prev => prev.filter(todo => todo.unique_id !== tempId));
       }
     } catch (error) {
-      console.error('Error updating todo:', error);
-      setTodos(prev =>
-        prev.map(todo =>
-          todo.unique_id === id ? { ...todo, todo_checkbox: currentStatus } : todo
-        )
-      );
-    } finally {
-      setPendingTodos(prev => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
+      // Remove temporary todo on error
+      setTodos(prev => prev.filter(todo => todo.unique_id !== tempId));
+      console.error('Error adding todo:', error);
     }
   };
 
   const handleDeleteTodo = async (id: string) => {
+    // Optimistically remove from UI
     setTodos(prev => prev.filter(todo => todo.unique_id !== id));
 
     try {
@@ -129,11 +148,19 @@ const TodoTab: React.FC = () => {
       });
 
       if (!response.ok) {
-        fetchTodos();
+        // Revert deletion if failed
+        const deletedTodo = todos.find(todo => todo.unique_id === id);
+        if (deletedTodo) {
+          setTodos(prev => [...prev, deletedTodo]);
+        }
       }
     } catch (error) {
+      // Revert deletion on error
+      const deletedTodo = todos.find(todo => todo.unique_id === id);
+      if (deletedTodo) {
+        setTodos(prev => [...prev, deletedTodo]);
+      }
       console.error('Error deleting todo:', error);
-      fetchTodos();
     }
   };
 
@@ -187,19 +214,20 @@ const TodoTab: React.FC = () => {
               {todos.map(todo => (
                 <motion.li
                   key={todo.unique_id}
-                  className={`todo-item p-3 bg-gray-800 rounded-lg flex items-center ${
-                    todo.todo_checkbox ? 'completed' : ''
-                  } ${pendingTodos.has(todo.unique_id) ? 'opacity-60' : ''}`}
+                  className={`todo-item p-3 bg-gray-800 rounded-lg flex items-center ${todo.todo_checkbox ? 'completed' : ''}`}
                   initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  animate={{
+                    opacity: updatingTodos.has(todo.unique_id) ? 0.6 : 1,
+                    y: 0,
+                  }}
                   transition={{ duration: 0.3 }}
                 >
                   <input
                     type="checkbox"
                     className="checkbox mr-3"
                     checked={todo.todo_checkbox}
-                    onChange={() => handleToggleTodo(todo.unique_id, todo.todo_checkbox)}
-                    disabled={pendingTodos.has(todo.unique_id)}
+                    onChange={() => handleToggleTodo(todo.unique_id)}
+                    disabled={updatingTodos.has(todo.unique_id)}
                   />
                   <span className={`flex-1 ${todo.todo_checkbox ? 'line-through text-gray-500' : ''}`}>
                     {todo.todo_name}
@@ -210,14 +238,14 @@ const TodoTab: React.FC = () => {
                   <button
                     className="text-gray-400 hover:text-red-500 transition-colors"
                     onClick={() => handleDeleteTodo(todo.unique_id)}
-                    disabled={pendingTodos.has(todo.unique_id)}
+                    disabled={updatingTodos.has(todo.unique_id)}
                   >
                     <Trash2 size={18} />
                   </button>
                 </motion.li>
               ))}
 
-              {!isLoading && todos.length === 0 && (
+              {todos.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <p>No tasks yet. Add one above!</p>
                 </div>

@@ -149,5 +149,24 @@ def update_todo_agent(tododetails:str):
 
 
 
+@tool
+def time_today():
+    """
+    Returns the current date and time.
 
+    Use this tool whenever the user requests something that depends on the current or relative date/time.
+    Examples:
+    - Creating a todo with today's date or the current timestamp.
+    - Setting a deadline as "tomorrow", "next week", or similar.
+    - Scheduling or logging events based on the current time.
+
+    Always prefer this tool over guessing the time by yourself
+
+"""
+    from datetime import datetime
+    now = datetime.now()
+    return {
+        "time": now.strftime("%H:%M:%S"),
+        "date": now.strftime("%Y-%m-%d")
+    }
 

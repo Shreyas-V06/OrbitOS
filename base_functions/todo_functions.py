@@ -8,7 +8,7 @@ import uuid
 api=FastAPI()
 db=initialize_firestore()
 
-@api.get('/todos/{unique_id}',response_model=TodoBase)
+
 def get_todo_by_id(unique_id:str):
     try:
         doc_ref = db.collection("Todos").document(unique_id)
@@ -21,7 +21,7 @@ def get_todo_by_id(unique_id:str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
         
-@api.get('/todos',response_model=list[TodoBase])
+
 def get_all_todos():
     try:
         todoref = db.collection('Todos')
@@ -36,7 +36,7 @@ def get_all_todos():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@api.post('/todos',response_model=TodoBase)
+
 def create_todo(todo_data: TodoCreate):
     try:
         unique_id = f"todo{uuid.uuid4().hex[:8]}" 
@@ -55,7 +55,7 @@ def create_todo(todo_data: TodoCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@api.put('/todos/{unique_id}',response_model=dict)
+
 def update_todo(unique_id:str, todo_data: TodoUpdate):
     try:
         doc_ref = db.collection("Todos").document(unique_id)
@@ -86,7 +86,7 @@ def update_todo(unique_id:str, todo_data: TodoUpdate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@api.delete('/todos/{unique_id}', response_model=dict)
+
 def delete_todo(unique_id: str):
     try:
         todo = get_todo_by_id(unique_id)
