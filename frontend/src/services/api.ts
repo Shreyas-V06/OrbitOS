@@ -3,24 +3,21 @@ import axios from 'axios';
 const API_BASE_URL = 'http://localhost:8000/api';
 
 export const api = {
-  // Agent Chat
+
   sendMessage: async (message: string) => {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/agent/chat`, {
-        "message: message
-      }, {
+    const response = await axios.post(`${API_BASE_URL}/agent/chat`, 
+      { message },
+      {
         headers: {
+          'accept': 'application/json',
           'Content-Type': 'application/json'
         }
-      });
-      return response.data.response;
-    } catch (error) {
-      console.error('API Error:', error);
-      throw error;
-    }
+      }
+    );
+    return response.data.response;
   },
 
-  // Todo Operations
+
   getTodos: async () => {
     const response = await axios.get(`${API_BASE_URL}/todos`);
     return response.data.todos;

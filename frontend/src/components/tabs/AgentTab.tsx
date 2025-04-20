@@ -46,7 +46,7 @@ const AgentTab: React.FC = () => {
     setIsTyping(true);
     
     try {
-      const response = await fetch('http://localhost:8000/api/agent/chat', {  // Fix here: Add the protocol
+      const response = await fetch('http://localhost:8000/api/agent/chat', { 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,7 +58,7 @@ const AgentTab: React.FC = () => {
 
       const agentMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: data.response || "The agent didn't respond properly. Check backend.",
+        content: data.response || "Sorry the agent could not deal with that request. Please try again.",
         sender: 'agent',
         timestamp: new Date(),
       };
@@ -68,7 +68,7 @@ const AgentTab: React.FC = () => {
       console.error('Error sending message:', error);
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
-        content: "Something went wrong. Backend probably choked.",
+        content: "Oops! Something went wrong",
         sender: 'agent',
         timestamp: new Date()
       }]);

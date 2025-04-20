@@ -67,6 +67,7 @@ def get_all_todos_agent():
         return todos
     except Exception as e:
         return "User has created no todos at all"
+    
 
 def get_todo_by_id(unique_id:str):
     try:
@@ -98,8 +99,6 @@ def delete_todo_agent(unique_id: str):
         i.e 
         delete_todo_agent(unique_id=todo356aa75f) is wrong
         delete_todo_agent(todo356aa75f) is right
-
-        
     
     """
 
@@ -137,9 +136,18 @@ def update_todo_agent(tododetails:str):
     {unique_id='todoabc123',update_todo_details={todo_name='ABCD'}}
     Always follow this input format
     
+    do not even make even slight changes
+    like replace 'unique_id='todoabc123'' with 'unique_id:'todoabc123'
+    since regex has to be used with the output you generate
+    
     """
-
-    todo_object=output_parser_update_todo(tododetails)
+    parserLLM=initialize_parserLLM()
+    todo_object=output_parser_update_todo(tododetails,parserLLM)
     print(f"todo details passed are: {tododetails}")
     unique_id=extract_unique_id(tododetails)
     return  update_todo(unique_id,todo_object)
+
+
+
+
+
