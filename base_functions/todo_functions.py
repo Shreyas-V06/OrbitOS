@@ -1,8 +1,14 @@
 from fastapi import FastAPI, HTTPException #type:ignore
-from pydantic import BaseModel,Field
-from typing import List,Optional
-from schemas.todo_schemas import TodoBase,TodoCreate,TodoDelete,TodoUpdate
+from schemas.todo_schemas import TodoBase,TodoCreate,TodoUpdate
 from initializers.initialize_firestore import initialize_firestore
+from initializers.initialize_llm import initialize_parserLLM
+from langchain_community.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_core.prompts import ChatPromptTemplate
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.chains import create_retrieval_chain
 import uuid
 
 api=FastAPI()
@@ -100,6 +106,34 @@ def delete_todo(unique_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
+def query_file_base(query:str,file_path):
+    loader=PyPDFLoader(file_path)
+    docs=loader.load()
+    text_splitter=RecursiveCharacterTextSplitter(chunk_size=100,chunk_overlap=30)
+    chunks=text_splitter.split_documents(docs)
+    gemini_embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    VectorDB = FAISS.from_documents(chunks, gemini_embeddings)
+    prompt= ChatPromptTemplate.from_template("""
+Answer the following question based on the context mentioned below:
+                                          
+<context>
+{context}
+</context>
+                                          
+Question: {input}""")
+    LLM=initialize_parserLLM()
+    document_chain=create_stuff_documents_chain(LLM,prompt)
+    retriever=VectorDB.as_retriever()
+    retrieval_chain=create_retrieval_chain(retriever,document_chain)
+    response = retrieval_chain.invoke({"input": query})
+    return response['answer']
 
+
+    
+
+
+
+    
+  
 
     

@@ -7,13 +7,32 @@ import ReminderTab from './tabs/ReminderTab';
 import ProjectTab from './tabs/ProjectTab';
 import FloatingElements from './FloatingElements';
 
+interface Message {
+  id: string;
+  content: string;
+  sender: 'user' | 'agent';
+  timestamp: Date;
+}
+
 const MainLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState('agent');
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      content: "Welcome to OrbitOS! I'm your space guide. How can I assist you today?",
+      sender: 'agent',
+      timestamp: new Date()
+    }
+  ]);
+
+  const handleAddMessage = (newMessage: Message) => {
+    setMessages(prev => [...prev, newMessage]);
+  };
   
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'agent':
-        return <AgentTab />;
+        return <AgentTab messages={messages} onAddMessage={handleAddMessage} />;
       case 'todo':
         return <TodoTab />;
       case 'reminder':
@@ -21,7 +40,7 @@ const MainLayout: React.FC = () => {
       case 'project':
         return <ProjectTab />;
       default:
-        return <AgentTab />;
+        return <AgentTab messages={messages} onAddMessage={handleAddMessage} />;
     }
   };
   

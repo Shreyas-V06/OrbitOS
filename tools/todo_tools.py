@@ -1,8 +1,9 @@
-from base_functions.todo_functions import create_todo,update_todo
+from base_functions.todo_functions import create_todo,update_todo,query_file_base
 from langchain.agents import tool
 from tools.output_parsers import output_parser_create_todo,output_parser_update_todo,extract_unique_id
 from initializers.initialize_llm import initialize_parserLLM
 from initializers.initialize_firestore import initialize_firestore
+import os
 
 
 @tool
@@ -169,4 +170,41 @@ def time_today():
         "time": now.strftime("%H:%M:%S"),
         "date": now.strftime("%Y-%m-%d")
     }
+
+@tool
+def query_File(query:str):
+    """This is a tool which will help you to query the contents of a file
+       Whenever user uploads some file and makes requests related to the file
+       you can call this function to ask questions to the file
+       
+       For example: If the user uploads his friend's resume and asks you to create
+       tasks with the names of all the skills that the resume has, you could call
+       this function and ask "What are the skills that are mentioned in the resume?"
+       
+       INPUT: This tool expects one parameter: which is the query
+       pass the query directly without any double quotes or single quotes.
+
+
+       for the above example , the function call would simply look like:
+       Query_File(What are the skills in this file?)
+       and this will return an answer.
+    """
+    # Get the latest uploaded file from the uploads directory
+    upload_dir = "uploads"
+    if not os.path.exists(upload_dir) or not os.listdir(upload_dir):
+        return "No file has been uploaded yet."
+    
+    # Get the most recently modified file
+    files = [(f, os.path.getmtime(os.path.join(upload_dir, f))) for f in os.listdir(upload_dir)]
+    if not files:
+        return "No file available for processing."
+    
+    latest_file = max(files, key=lambda x: x[1])[0]
+    file_path = os.path.join(upload_dir, latest_file)
+    
+    try:
+        response = query_file_base(query=query, file_path=file_path)
+        return response
+    except Exception as e:
+        return f"Error processing file: {str(e)}"
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Send, PaperclipIcon } from 'lucide-react';
 
@@ -9,18 +9,15 @@ interface Message {
   timestamp: Date;
 }
 
-const AgentTab: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: "Welcome to OrbitOS! I'm your space guide. How can I assist you today?",
-      sender: 'agent',
-      timestamp: new Date()
-    }
-  ]);
-  
+interface AgentTabProps {
+  messages: Message[];
+  onAddMessage: (message: Message) => void;
+}
+
+const AgentTab: React.FC<AgentTabProps> = ({ messages, onAddMessage }) => {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -41,7 +38,7 @@ const AgentTab: React.FC = () => {
       timestamp: new Date()
     };
     
-    setMessages(prev => [...prev, userMessage]);
+    onAddMessage(userMessage);
     setInputValue('');
     setIsTyping(true);
     
@@ -51,7 +48,10 @@ const AgentTab: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: inputValue }),
+        body: JSON.stringify({ 
+          message: inputValue,
+          filePath: currentFilePath // Send the current file path with the message
+        }),
       });
 
       const data = await response.json();
@@ -63,15 +63,15 @@ const AgentTab: React.FC = () => {
         timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, agentMessage]);
+      onAddMessage(agentMessage);
     } catch (error) {
       console.error('Error sending message:', error);
-      setMessages(prev => [...prev, {
+      onAddMessage({
         id: (Date.now() + 1).toString(),
         content: "Oops! Something went wrong",
         sender: 'agent',
         timestamp: new Date()
-      }]);
+      });
     } finally {
       setIsTyping(false);
     }
@@ -84,35 +84,42 @@ const AgentTab: React.FC = () => {
     }
   };
   
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      const fileName = files[0].name;
-      setMessages(prev => [
-        ...prev, 
-        {
+      const file = files[0];
+      const fileName = file.name;
+      
+      // Create FormData and send file to backend
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const response = await fetch('http://localhost:8000/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+        setCurrentFilePath(data.filePath);
+
+        onAddMessage({
           id: Date.now().toString(),
           content: `File uploaded: ${fileName}`,
           sender: 'user',
           timestamp: new Date()
-        }
-      ]);
+        });
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        onAddMessage({
+          id: Date.now().toString(),
+          content: 'Error uploading file. Please try again.',
+          sender: 'agent',
+          timestamp: new Date()
+        });
+      }
       
       e.target.value = '';
-      
-      setIsTyping(true);
-      setTimeout(() => {
-        setMessages(prev => [
-          ...prev,
-          {
-            id: (Date.now() + 1).toString(),
-            content: `I've received your file: ${fileName}. The file processing functionality will be implemented in a future update.`,
-            sender: 'agent',
-            timestamp: new Date()
-          }
-        ]);
-        setIsTyping(false);
-      }, 1500);
     }
   };
   

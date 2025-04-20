@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from agent_brain.agent_executor import invoke_agent
 from schemas.todo_schemas import TodoCreate,TodoBase,TodoUpdate
@@ -7,6 +7,8 @@ from pydantic import BaseModel
 from typing import Optional,List
 from datetime import datetime
 import uuid
+import os
+import shutil
 
 
 app = FastAPI()
@@ -18,13 +20,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Create uploads directory if it doesn't exist
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 class ChatMessage(BaseModel):
     message: str
+    filePath: Optional[str] = None
+
+
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    try:
+        file_path = os.path.join(UPLOAD_DIR, file.filename)
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        return {"filePath": file_path}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/agent/chat")
 async def chat_with_agent(message: ChatMessage):
     print("Received message:", message.message)  # Debug log
+    print("File path:", message.filePath)  # Debug log
     try:
         response = invoke_agent(message.message)
         print("Agent response:", response)  # Debug log
