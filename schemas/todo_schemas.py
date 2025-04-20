@@ -1,8 +1,12 @@
 from pydantic import Field,BaseModel
 from datetime import date
-from typing import Optional,List
+from typing import Optional
 
-
+"""
+ Simple class defintions
+ being used for Pydantic Output parsing and schema validator
+ 
+"""
 class TodoBase(BaseModel):
     todo_name:str=Field(...,min_length=2,max_length=30,description="Name of the todo")
     todo_checkbox:bool=Field(False,description="Status of the todo")

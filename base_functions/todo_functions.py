@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException #type:ignore
+from fastapi import HTTPException 
 from schemas.todo_schemas import TodoBase,TodoCreate,TodoUpdate
 from initializers.initialize_firestore import initialize_firestore
 from initializers.initialize_llm import initialize_parserLLM
@@ -11,9 +11,13 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains import create_retrieval_chain
 import uuid
 
-api=FastAPI()
+
 db=initialize_firestore()
 
+"""
+These are various helper functions , these are mainly being used inside agent tools
+
+"""
 
 def get_todo_by_id(unique_id:str):
     try:
@@ -129,7 +133,19 @@ Question: {input}""")
     return response['answer']
 
 
-    
+
+def get_todo_by_id(unique_id:str):
+    try:
+        db=initialize_firestore()
+        doc_ref = db.collection("Todos").document(unique_id)
+        doc = doc_ref.get()
+
+        if not doc.exists:
+            return f"Todo with id {unique_id} not found"
+
+        return doc.to_dict()
+    except Exception as e:
+        return "Error occured"
 
 
 

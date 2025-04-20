@@ -20,13 +20,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create uploads directory if it doesn't exist
+
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 class ChatMessage(BaseModel):
     message: str
     filePath: Optional[str] = None
+
+"""
+Below mentioned are various API Endpoints which are being used
+
+Endpoints for agent tab:
+
+1. POST /upload --> this endpoint is to upload file , used for RAG based task creation
+2. POST /api/agent/chat --> this endpoint is used to invoke agent 
+
+Endpoints for todo tab:
+
+1.POST /todos --> create todo
+2.GET /todos --> get all todos
+3.PUT /todos/{unique_id} --> update a todo
+4.DELETE /todos/{unique_id} --> delete a todo
+
+"""
 
 
 @app.post("/upload")
@@ -42,11 +59,11 @@ async def upload_file(file: UploadFile = File(...)):
 
 @app.post("/api/agent/chat")
 async def chat_with_agent(message: ChatMessage):
-    print("Received message:", message.message)  # Debug log
-    print("File path:", message.filePath)  # Debug log
+    print("Received message:", message.message) 
+    print("File path:", message.filePath) 
     try:
         response = invoke_agent(message.message)
-        print("Agent response:", response)  # Debug log
+        print("Agent response:", response)  
         return {"response": response}
     except Exception as e:
         print("Error:", str(e)) 
@@ -78,7 +95,7 @@ async def create_todo(todo_data: TodoCreate):
         unique_id = f"todo{uuid.uuid4().hex[:8]}" 
         todo_dict = {
             "todo_name": todo_data.todo_name,
-            "todo_checkbox": todo_data.todo_checkbox,  # Removed str() conversion
+            "todo_checkbox": todo_data.todo_checkbox,  
             "todo_duedate": todo_data.todo_duedate.isoformat(),
             "unique_id": unique_id,
         }

@@ -1,9 +1,17 @@
-from base_functions.todo_functions import create_todo,update_todo,query_file_base
+from base_functions.todo_functions import create_todo,update_todo,query_file_base,get_todo_by_id
 from langchain.agents import tool
 from tools.output_parsers import output_parser_create_todo,output_parser_update_todo,extract_unique_id
 from initializers.initialize_llm import initialize_parserLLM
 from initializers.initialize_firestore import initialize_firestore
 import os
+
+"""
+   These are the tools/functions which the agent has access to.
+   The docstrings of each tool tells the agent when and how to
+   use the tool.
+
+"""
+
 
 
 @tool
@@ -11,6 +19,7 @@ def create_todo_agent(todo_details:str):
     """
       Creates a new todo in Firestore.
       Use this tool whenever user asks 
+      to create a new todo/task
 
     This function accepts three seperate parameters and not a single parameter.
 
@@ -28,8 +37,8 @@ def create_todo_agent(todo_details:str):
 def get_all_todos_agent():
     
     """
-    this tool returns list of all the todo lists from firestore
-    Use this function whenever you want to get details of all the todolists first
+    this tool returns list of all the todo lists from firestore,
+    Use this function whenever you want to get details of all the todolists, first
     and then to search for the details of a specific todo list 
     the details you want like:
 
@@ -41,7 +50,7 @@ def get_all_todos_agent():
     This tool has no parameters
 
     This tool returns data regarding all the todos as a list
-    where in, each todo's details will be enclosed in curly braces
+    each todo's details will be enclosed in curly braces
 
     Example:
     [ 
@@ -69,20 +78,6 @@ def get_all_todos_agent():
     except Exception as e:
         return "User has created no todos at all"
     
-
-def get_todo_by_id(unique_id:str):
-    try:
-        db=initialize_firestore()
-        doc_ref = db.collection("Todos").document(unique_id)
-        doc = doc_ref.get()
-
-        if not doc.exists:
-            return f"Todo with id {unique_id} not found"
-
-        return doc.to_dict()
-    except Exception as e:
-        return "Error occured"
-
 
 
 @tool
@@ -173,7 +168,8 @@ def time_today():
 
 @tool
 def query_File(query:str):
-    """This is a tool which will help you to query the contents of a file
+    """
+       This is a tool which will help you to query the contents of a file
        Whenever user uploads some file and makes requests related to the file
        you can call this function to ask questions to the file
        
@@ -189,12 +185,11 @@ def query_File(query:str):
        Query_File(What are the skills in this file?)
        and this will return an answer.
     """
-    # Get the latest uploaded file from the uploads directory
+
     upload_dir = "uploads"
     if not os.path.exists(upload_dir) or not os.listdir(upload_dir):
         return "No file has been uploaded yet."
-    
-    # Get the most recently modified file
+
     files = [(f, os.path.getmtime(os.path.join(upload_dir, f))) for f in os.listdir(upload_dir)]
     if not files:
         return "No file available for processing."

@@ -4,7 +4,24 @@ from schemas.todo_schemas import TodoCreate,TodoUpdate
 from initializers.initialize_llm import initialize_parserLLM
 import re
 
+"""
+  This file contains output parsers, 
+  agents by default generate string outputs.
+
+  Hence we need output parsers to generate Python objects
+  instead of simple strings.
+
+   I could have directly added Pydantic Output parser into 
+   agent logic but I am not aware of the syntax :(
+
+   """
+
+
+
 def output_parser_create_todo(details:str,ParserLLM):
+
+    """This output parser converts a string containing todo details into an actual Python Object"""
+
     parser=PydanticOutputParser(pydantic_object=TodoCreate)
     human_prompt=HumanMessagePromptTemplate.from_template("{request}/n{format_instructions}")
     chat_prompt=ChatPromptTemplate.from_messages([human_prompt])
@@ -23,6 +40,9 @@ def output_parser_create_todo(details:str,ParserLLM):
     return result_values
 
 def output_parser_update_todo(details:str,ParserLLM):
+
+    """This output parser converts a string containing todo details into an actual Python dictionary"""
+    
     parser=PydanticOutputParser(pydantic_object=TodoUpdate)
     human_prompt=HumanMessagePromptTemplate.from_template("{request}/n{format_instructions}")
     chat_prompt=ChatPromptTemplate.from_messages([human_prompt])
@@ -73,11 +93,12 @@ Now parse the following input:\n
 
     return result_values
 
+
 def extract_unique_id(input_string: str):
-    # Regular expression to match the unique_id pattern
+
+    """regex method to extract unique id from a given dictionary"""
+
     match = re.search(r"unique_id='([a-zA-Z0-9]+)'", input_string)
-    
-    # If a match is found, return the unique_id, else return None
     if match:
         return match.group(1)
     else:
